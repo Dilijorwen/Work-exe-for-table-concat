@@ -41,11 +41,23 @@ def compile_company_patterns(company_map):
 
 
 def detect_company_in_row(row, patterns):
-    cell_text = str(row[8])
+    cell_text = str(row[8]) if len(row) > 8 else ""
     for pattern, short_name in patterns:
         if pattern.search(cell_text):
             return short_name
     return "Неизвестно"
+
+
+def extract_bank_name(cell_value):
+    text = str(cell_value)
+    if not text or text.strip() == "nan":
+        return "Неизвестно"
+
+    matches = re.findall(r'"([^"]+)"', text)
+    if matches:
+        return matches[-1].strip()
+    else:
+        return "Неизвестно"
 
 
 def clean_dataframe(df):
@@ -76,6 +88,12 @@ def process_file(filepath, patterns=None):
             df["Компания"] = df.apply(lambda row: detect_company_in_row(row, patterns), axis=1)
         else:
             df["Компания"] = "Неизвестно"
+
+        if df.shape[1] >= 10:
+            df["Банк"] = df.iloc[:, 9].apply(extract_bank_name)
+        else:
+            df["Банк"] = "Неизвестно"
+
         return df
     except Exception as e:
         messagebox.showwarning("Ошибка файла", f"Не удалось обработать {os.path.basename(filepath)}:\n{e}")
@@ -139,14 +157,15 @@ def process_excels():
 
 root = tk.Tk()
 root.title("Объединение Excel-файлов")
-root.geometry("480x160")
+root.geometry("520x180")
 root.resizable(False, False)
 
-info = tk.Label(root, text="1. Выберите текстовый файл с компаниями (опционально),\n"
-                           "2. затем Excel-файлы для объединения.", justify="center")
+info = tk.Label(root, text="1. Выберите текстовый файл с компаниями,\n"
+                           "2. затем Excel-файлы для объединения.\n",
+                justify="center")
 info.pack(pady=10)
 
-btn_select = tk.Button(root, text="Выбрать файлы и объединить", command=process_excels, font=("Arial", 12))
+btn_select = tk.Button(root, text="Выбрать файлы и объединить", command=process_excels)
 btn_select.pack(pady=20)
 
 root.mainloop()
