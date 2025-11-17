@@ -3,7 +3,8 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 import os
 import re
-
+pd.set_option('display.max_rows', None)
+pd.set_option('display.max_columns', None)
 
 def read_excel_safely(filepath):
     ext = os.path.splitext(filepath)[1].lower()
@@ -84,13 +85,16 @@ def process_file(filepath, patterns=None):
             messagebox.showwarning("Пропуск файла", f"Не удалось найти начало таблицы:\n{os.path.basename(filepath)}")
             return None
 
+        df.drop(df.columns[3], axis=1, inplace=True)
+
+
         if patterns:
             df["Компания"] = df.apply(lambda row: detect_company_in_row(row, patterns), axis=1)
         else:
             df["Компания"] = "Неизвестно"
 
-        if df.shape[1] >= 10:
-            df["Банк"] = df.iloc[:, 9].apply(extract_bank_name)
+        if df.shape[1] >= 9:
+            df["Банк"] = df.iloc[:, 8].apply(extract_bank_name)
         else:
             df["Банк"] = "Неизвестно"
 
