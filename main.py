@@ -3,8 +3,6 @@ import tkinter as tk
 from tkinter import filedialog, messagebox
 import os
 import re
-pd.set_option('display.max_rows', None)
-pd.set_option('display.max_columns', None)
 
 def read_excel_safely(filepath):
     ext = os.path.splitext(filepath)[1].lower()
@@ -87,7 +85,6 @@ def process_file(filepath, patterns=None):
 
         df.drop(df.columns[3], axis=1, inplace=True)
 
-
         if patterns:
             df["Компания"] = df.apply(lambda row: detect_company_in_row(row, patterns), axis=1)
         else:
@@ -125,11 +122,18 @@ def merge_and_save(df_list):
     first_col = merged.columns[0]
     merged[first_col] = pd.to_numeric(merged[first_col], errors='coerce')
 
-    sort_keys = [first_col]
+    sort_keys = [1]
     if date_col is not None:
         sort_keys.append(date_col)
     merged.sort_values(by=sort_keys, ascending=True, na_position='last', inplace=True)
     merged.reset_index(drop=True, inplace=True)
+
+    for col_idx in [3, 4]:
+        if col_idx < merged.shape[1]:
+            merged.iloc[:, col_idx] = (
+                merged.iloc[:, col_idx]
+                .apply(lambda x: str(x).replace('.', ',') if pd.notna(x) else x)
+            )
 
     output_file = filedialog.asksaveasfilename(
         title="Сохранить итоговый файл как...",
