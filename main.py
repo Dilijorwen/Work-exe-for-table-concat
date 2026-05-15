@@ -9,15 +9,15 @@ import pandas as pd
 # Какие заголовки ищем в исходных таблицах
 REQUIRED_SOURCE_HEADERS = [
     "Дата",
-    "Номер",
     "Поступление",
     "Списание",
     "Назначение платежа",
     "Контрагент",
+    "Комментарий",
+    "Вид операции",
     "Организация",
     "Банковский счет",
 ]
-
 
 
 def normalize_text(value) -> str:
@@ -66,7 +66,6 @@ def find_header_row_and_columns(df_raw: pd.DataFrame):
     по их названиям, а не по номеру.
     """
     normalized_required = {normalize_text(x): x for x in REQUIRED_SOURCE_HEADERS}
-
     MAX_HEADER_SCAN_ROWS = 50
     for row_idx in range(min(len(df_raw), MAX_HEADER_SCAN_ROWS)):
         row_values = df_raw.iloc[row_idx].tolist()
@@ -248,11 +247,12 @@ def process_source_file(file_path: str, company_map: dict) -> pd.DataFrame:
                 continue
 
             date_val = row.iloc[col_map["Дата"]]
-            number_val = row.iloc[col_map["Номер"]]
             income_val = row.iloc[col_map["Поступление"]]
             expense_val = row.iloc[col_map["Списание"]]
             purpose_val = row.iloc[col_map["Назначение платежа"]]
             counterparty_val = row.iloc[col_map["Контрагент"]]
+            comment_val = row.iloc[col_map["Комментарий"]]
+            operation_type_val = row.iloc[col_map["Вид операции"]]
             organization_val = row.iloc[col_map["Организация"]]
             bank_account_val = row.iloc[col_map["Банковский счет"]]
 
@@ -261,11 +261,11 @@ def process_source_file(file_path: str, company_map: dict) -> pd.DataFrame:
                 is_empty(x)
                 for x in [
                     date_val,
-                    number_val,
                     income_val,
                     expense_val,
                     purpose_val,
                     counterparty_val,
+                    operation_type_val,
                     organization_val,
                     bank_account_val,
                 ]
@@ -280,18 +280,17 @@ def process_source_file(file_path: str, company_map: dict) -> pd.DataFrame:
 
             result_rows.append(
                 {
-                    "№ п/п": "",  # заполним потом
                     "Дата": "" if is_empty(date_val) else str(date_val).strip(),
-                    "Номер вх.": "" if is_empty(number_val) else str(number_val).strip(),
                     "Поступление": try_parse_amount(income_val),
                     "Списание": try_parse_amount(expense_val),
                     "Назначение платежа": "" if is_empty(purpose_val) else str(purpose_val).strip(),
-                    "Китаец": "",
                     "Контрагент": "" if is_empty(counterparty_val) else str(counterparty_val).strip(),
+                    "Вид операции": "" if is_empty(operation_type_val) else str(operation_type_val).strip(),
                     "Организация": organization_text,
                     "Банковский счет": bank_account_text,
                     "Компания": company,
                     "Банк": bank_name,
+                    "Код": "" if is_empty(comment_val) else str(comment_val).strip(),
                 }
             )
 
@@ -320,23 +319,19 @@ def merge_files(source_files: list[str], mapping_file: str, output_csv: str):
 
     final_df = pd.concat(all_frames, ignore_index=True)
 
-    # Перенумерация
-    final_df["№ п/п"] = range(1, len(final_df) + 1)
-
     # Гарантируем порядок столбцов
     FINAL_COLUMNS = [
-        "№ п/п",
         "Дата",
-        "Номер вх.",
         "Поступление",
         "Списание",
         "Назначение платежа",
-        "Китаец",
         "Контрагент",
+        "Вид операции",
         "Организация",
         "Банковский счет",
         "Компания",
         "Банк",
+        "Код",
     ]
 
     final_df = final_df[FINAL_COLUMNS]
